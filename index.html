@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pop-It Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom CSS for pop-it elements */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: auto; /* Allow scrolling if content is too large */
+        }
+
+        .pop-it-container {
+            display: grid;
+            gap: 0.5rem; /* Space between pops */
+            padding: 1.5rem;
+            background-color: #ffffff; /* White background for the pop-it board */
+            border-radius: 1.5rem; /* More rounded corners */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1); /* Soft shadow */
+            max-width: 90%; /* Max width for responsiveness */
+            width: fit-content; /* Adjust width to content */
+        }
+
+        .pop-row {
+            display: flex;
+            gap: 0.5rem; /* Space between pops in a row */
+            justify-content: center;
+        }
+
+        .pop-it {
+            width: 3.5rem; /* Size of each pop */
+            height: 3.5rem;
+            border-radius: 50%; /* Make it perfectly round */
+            background-color: #e2e8f0; /* Default unpopped color */
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: rgba(0, 0, 0, 0.2); /* Faint number */
+            box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1); /* 3D effect */
+            transition: all 0.1s ease-out;
+            user-select: none; /* Prevent text selection */
+            -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+        }
+
+        .pop-it.popped {
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2); /* Flattened effect when popped */
+            transform: scale(0.95); /* Slightly shrink when popped */
+            color: rgba(0, 0, 0, 0.1); /* Even fainter number */
+        }
+
+        /* Row-specific colors */
+        .pop-it.red { background-color: #ef4444; } /* Red */
+        .pop-it.orange { background-color: #f97316; } /* Orange */
+        .pop-it.yellow { background-color: #facc15; } /* Yellow */
+        .pop-it.green { background-color: #22c55e; } /* Green */
+        .pop-it.blue { background-color: #3b82f6; } /* Blue */
+        .pop-it.purple { background-color: #a855f7; } /* Purple */
+
+        .pop-it.popped.red { background-color: #dc2626; }
+        .pop-it.popped.orange { background-color: #ea580c; }
+        .pop-it.popped.yellow { background-color: #eab308; }
+        .pop-it.popped.green { background-color: #16a34a; }
+        .pop-it.popped.blue { background-color: #2563eb; }
+        .pop-it.popped.purple { background-color: #9333ea; }
+
+        .button-container {
+            display: flex;
+            gap: 1rem; /* Space between buttons */
+            margin-top: 2rem;
+        }
+
+        .action-button {
+            background-color: #6366f1; /* Indigo */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-out;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            outline: none;
+        }
+
+        .action-button:hover {
+            background-color: #4f46e5; /* Darker indigo */
+            transform: translateY(-2px);
+        }
+
+        .action-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .pop-it {
+                width: 2.8rem; /* Smaller size for mobile */
+                height: 2.8rem;
+                font-size: 1.2rem;
+            }
+            .pop-it-container {
+                padding: 1rem;
+                gap: 0.4rem;
+            }
+            .pop-row {
+                gap: 0.4rem;
+            }
+            .button-container {
+                flex-direction: column; /* Stack buttons vertically on small screens */
+                gap: 0.75rem;
+            }
+            .action-button {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.9rem;
+                width: 100%; /* Full width for stacked buttons */
+            }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+    <h1 class="text-4xl font-extrabold text-gray-800 mb-8 tracking-tight">Pop-It Fun!</h1>
+
+    <div id="popItGrid" class="pop-it-container">
+        </div>
+
+    <div class="button-container">
+        <button id="resetButton" class="action-button">Reset Pop-It</button>
+        <button id="flipButton" class="action-button">Flip Pop-It</button>
+    </div>
+
+    <script>
+        const popItGrid = document.getElementById('popItGrid');
+        const resetButton = document.getElementById('resetButton');
+        const flipButton = document.getElementById('flipButton'); // Get the new flip button
+
+        // Define the colors for each row
+        const rowColors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'];
+        const popsPerRow = 6; // Number of pops in each row
+
+        /**
+         * Renders the pop-it grid based on the current state.
+         * @param {boolean[][]} poppedState - A 2D array indicating which pops are popped.
+         */
+        function renderPopIt(poppedState) {
+            popItGrid.innerHTML = ''; // Clear existing grid
+            poppedState.forEach((row, rowIndex) => {
+                const rowElement = document.createElement('div');
+                rowElement.classList.add('pop-row');
+                row.forEach((isPopped, popIndex) => {
+                    const popElement = document.createElement('div');
+                    popElement.classList.add('pop-it', rowColors[rowIndex]);
+                    if (isPopped) {
+                        popElement.classList.add('popped');
+                    }
+                    popElement.dataset.rowIndex = rowIndex;
+                    popElement.dataset.popIndex = popIndex;
+                    popElement.textContent = popIndex + 1; // Display number on pop
+                    rowElement.appendChild(popElement);
+                });
+                popItGrid.appendChild(rowElement);
+            });
+        }
+
+        /**
+         * Initializes the pop-it state to all unpopped.
+         * @returns {boolean[][]} A new 2D array representing the initial state.
+         */
+        function initializePopItState() {
+            return Array.from({ length: rowColors.length }, () =>
+                Array.from({ length: popsPerRow }, () => false)
+            );
+        }
+
+        /**
+         * Inverts the state of all pops in the currentPopItState.
+         */
+        function flipPopItState() {
+            currentPopItState = currentPopItState.map(row =>
+                row.map(isPopped => !isPopped) // Invert each boolean
+            );
+        }
+
+        let currentPopItState = initializePopItState();
+
+        // Event listener for popping a bubble
+        popItGrid.addEventListener('click', (event) => {
+            const popElement = event.target.closest('.pop-it');
+            if (popElement) {
+                const rowIndex = parseInt(popElement.dataset.rowIndex);
+                const popIndex = parseInt(popElement.dataset.popIndex);
+
+                // Toggle the popped state
+                currentPopItState[rowIndex][popIndex] = !currentPopItState[rowIndex][popIndex];
+                renderPopIt(currentPopItState); // Re-render the grid
+            }
+        });
+
+        // Event listener for the reset button
+        resetButton.addEventListener('click', () => {
+            currentPopItState = initializePopItState(); // Reset state
+            renderPopIt(currentPopItState); // Re-render the grid
+        });
+
+        // Event listener for the new flip button
+        flipButton.addEventListener('click', () => {
+            flipPopItState(); // Invert the state
+            renderPopIt(currentPopItState); // Re-render the grid
+        });
+
+        // Initial render when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPopIt(currentPopItState);
+        });
+    </script>
+</body>
+</html>
